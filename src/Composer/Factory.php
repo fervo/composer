@@ -214,6 +214,47 @@ class Factory
             $config->merge(array('config' => $authData));
         }
 
+        foreach ($_ENV as $key => $value) {
+            $matches = null;
+            if (preg_match('/^COMPOSER_AUTH__(HTTP_BASIC|BITBUCKET_OAUTH|GITHUB_OAUTH|GITLAB_OAUTH|GITLAB_TOKEN)__([A-Z_]+)$/i', $key, $matches)) {
+                $domain = str_replace('__', '.', strtolower($matches[2]));
+                $type = $matches[1];
+
+                switch ($type) {
+                    case 'HTTP_BASIC':
+                        $values = explode(':', $value, 2);
+                        $config->merge(array('config' => [
+                            'http-basic' => [
+                                $domain => [
+                                    'username' => isset($values[0]) ? $values[0] : null,
+                                    'password' => isset($values[1]) ? $values[1] : null,
+                                ]
+                            ]
+                        ]));
+                        break;
+                    case 'GITHUB_OAUTH':
+                    case 'GITLAB_OAUTH':
+                    case 'GITLAB_TOKEN':
+                        $config->merge(array('config' => [
+                            str_replace('_', '-', strtolower($type)) => [
+                                $domain => $value,
+                            ]
+                        ]));
+                        break;
+                    case 'BITBUCKET_OAUTH':
+                        $values = explode(':', $value, 2);
+                        $config->merge(array('config' => [
+                            'bitbucket-oauth' => [
+                                $domain => [
+                                    'consumer-key' => isset($values[0]) ? $values[0] : null,
+                                    'consumer-secret' => isset($values[1]) ? $values[1] : null,
+                                ]
+                            ]
+                        ]));
+                }
+            }
+        }
+
         return $config;
     }
 
